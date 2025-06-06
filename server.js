@@ -8,20 +8,101 @@ app.use(express.json());
 
 let requests = [];
 
+// Health check endpoint
 app.get("/health", (req, res) => {
-  res.status(200).json({ message: "OK", region: process.env.REGION || "default" });
+  res.status(200).json({
+    message: "OK",
+    region: process.env.REGION || "default",
+  });
 });
 
+// Endpoint to log incoming request data
 app.post("/log", (req, res) => {
-  const { status, region, timestamp } = req.body;
-  requests.push({ status, region, timestamp });
+  const { status, region, timestamp, latency, errorCode, clientRegion } = req.body;
+  requests.push({ status, region, timestamp, latency, errorCode, clientRegion });
   res.json({ message: "Logged" });
 });
 
+// Get all logs
 app.get("/logs", (req, res) => {
   res.json({ requests });
 });
 
+// Success rate by region
+app.get("/metrics/success-rate", (req, res) => {
+  const stats = {};
+  requests.forEach((req) => {
+    const region = req.region || "unknown";
+    if (!stats[region]) {
+      stats[region] = { success: 0, total: 0 };
+    }
+    stats[region].total++;
+    if (req.status === "success") {
+      stats[region].success++;
+    }
+  });
+
+  const result = {};
+  for (const region in stats) {
+    const { success, total } = stats[region];
+    result[region] = ((success / total) * 100).toFixed(2);
+  }
+
+  res.json(result);
+});
+
+// Average latency by region
+app.get("/metrics/latency", (req, res) => {
+  const latencyStats = {};
+  requests.forEach((r) => {
+    const region = r.region || "unknown";
+    if (!latencyStats[region]) {
+      latencyStats[region] = [];
+    }
+    if (r.latency) {
+      latencyStats[region].push(Number(r.latency));
+    }
+  });
+
+  const result = {};
+  for (const region in latencyStats) {
+    const values = latencyStats[region];
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    result[region] = avg.toFixed(2);
+  }
+
+  res.json(result);
+});
+
+// Error distribution
+app.get("/metrics/error-codes", (req, res) => {
+  const errorStats = {};
+  requests.forEach((r) => {
+    const code = r.errorCode || "none";
+    if (!errorStats[code]) {
+      errorStats[code] = 0;
+    }
+    errorStats[code]++;
+  });
+
+  res.json(errorStats);
+});
+
+// Requests volume per client region
+app.get("/metrics/client-region-distribution", (req, res) => {
+  const clientStats = {};
+  requests.forEach((r) => {
+    const clientRegion = r.clientRegion || "unknown";
+    if (!clientStats[clientRegion]) {
+      clientStats[clientRegion] = 0;
+    }
+    clientStats[clientRegion]++;
+  });
+
+  res.json(clientStats);
+});
+
+// Start the server
 app.listen(port, () => {
   console.log(`API server running on port ${port}`);
 });
