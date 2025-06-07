@@ -102,6 +102,25 @@ app.get("/metrics/client-region-distribution", (req, res) => {
   res.json(clientStats);
 });
 
+
+app.get("/metrics/success-rate-by-hour", (req, res) => {
+  const hourlyStats = {};
+  requests.forEach(({ status, timestamp }) => {
+    const hour = new Date(timestamp).toISOString().slice(0, 13); // e.g. "2025-06-06T14"
+    if (!hourlyStats[hour]) hourlyStats[hour] = { success: 0, total: 0 };
+    hourlyStats[hour].total++;
+    if (status === "success") hourlyStats[hour].success++;
+  });
+
+  const result = {};
+  for (const hour in hourlyStats) {
+    const { success, total } = hourlyStats[hour];
+    result[hour] = ((success / total) * 100).toFixed(2);
+  }
+  res.json(result);
+});
+
+
 // Delete all logs
 app.delete("/logs", (req, res) => {
   requests = []; // clear the in-memory array
