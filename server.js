@@ -102,6 +102,13 @@ app.get("/metrics/client-region-distribution", (req, res) => {
   res.json(clientStats);
 });
 
+// Delete all logs
+app.delete("/logs", (req, res) => {
+  requests = []; // clear the in-memory array
+  res.json({ message: "All logs deleted successfully" });
+});
+
+
 // Start the server
 app.listen(port, () => {
   console.log(`API server running on port ${port}`);
