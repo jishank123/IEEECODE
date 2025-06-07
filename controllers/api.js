@@ -7,14 +7,21 @@ const Answer = require("../models/Answer");
 // Create a new question
 router.post("/questions", async (req, res) => {
   try {
-    const { title, description, tags } = req.body;
-    const question = new Question({ title, description, tags });
+    const { title, description, tags, region } = req.body;  // include region here
+
+    // Optional: add validation for region if required
+    if (!region) {
+      return res.status(400).json({ error: "Region is required." });
+    }
+
+    const question = new Question({ title, description, tags, region });
     await question.save();
     res.status(201).json(question);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
 
 // Get all questions
 router.get("/questions", async (req, res) => {
