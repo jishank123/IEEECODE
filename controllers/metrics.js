@@ -48,6 +48,57 @@ router.post("/logs", (req, res) => {
   res.json({ message: `${logs.length} logs added successfully.` });
 });
 
+router.get("/logs/summary", (req, res) => {
+  const summary = {};
+
+  requests.forEach((req) => {
+    const region = req.region || "unknown";
+    if (!summary[region]) {
+      summary[region] = {
+        successCount: 0,
+        failureCount: 0,
+        totalLatency: 0,
+        latencyCount: 0,
+        errorCodes: new Set(),
+        clientRegions: new Set(),
+      };
+    }
+
+    if (req.status === "success") {
+      summary[region].successCount++;
+    } else if (req.status === "failure") {
+      summary[region].failureCount++;
+      if (req.errorCode) {
+        summary[region].errorCodes.add(req.errorCode);
+      }
+    }
+
+    summary[region].totalLatency += req.latency || 0;
+    summary[region].latencyCount++;
+
+    if (req.clientRegion) {
+      summary[region].clientRegions.add(req.clientRegion);
+    }
+  });
+
+  const result = [];
+  for (const region in summary) {
+    const data = summary[region];
+    result.push({
+      serverRegion: region,
+      successCount: data.successCount,
+      failureCount: data.failureCount,
+      avgLatency: data.latencyCount
+        ? (data.totalLatency / data.latencyCount).toFixed(1)
+        : 0,
+      errorCodes: Array.from(data.errorCodes).join(", ") || "-",
+      clientRegions: Array.from(data.clientRegions).join(", "),
+    });
+  }
+
+  res.json(result);
+});
+
 router.get("/logs", (req, res) => {
   res.json({ requests });
 });
