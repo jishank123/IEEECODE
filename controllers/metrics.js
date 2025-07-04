@@ -6,12 +6,46 @@ let requests = []; // We'll keep the in-memory storage here and export functions
 
 // To allow access to requests array from server.js if needed
 const getRequests = () => requests;
-const clearRequests = () => { requests = []; };
+const clearRequests = () => {
+  requests = [];
+};
 
 router.post("/log", (req, res) => {
-  const { status, region, timestamp, latency, errorCode, clientRegion } = req.body;
-  requests.push({ status, region, timestamp, latency, errorCode, clientRegion });
+  const { status, region, timestamp, latency, errorCode, clientRegion } =
+    req.body;
+  requests.push({
+    status,
+    region,
+    timestamp,
+    latency,
+    errorCode,
+    clientRegion,
+  });
   res.json({ message: "Logged" });
+});
+
+router.post("/logs", (req, res) => {
+  const logs = req.body.logs; // Expecting { logs: [ {...}, {...} ] }
+
+  if (!Array.isArray(logs)) {
+    return res
+      .status(400)
+      .json({ message: "Invalid request: 'logs' should be an array." });
+  }
+
+  logs.forEach((log) => {
+    const { status, region, timestamp, latency, errorCode, clientRegion } = log;
+    requests.push({
+      status,
+      region,
+      timestamp,
+      latency,
+      errorCode,
+      clientRegion,
+    });
+  });
+
+  res.json({ message: `${logs.length} logs added successfully.` });
 });
 
 router.get("/logs", (req, res) => {
